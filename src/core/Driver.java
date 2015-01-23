@@ -7,7 +7,9 @@ import externalUtil.StdOut;
 
 import java.io.*;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 public class Driver {
 	
 	public static Dataset d;
@@ -15,25 +17,201 @@ public class Driver {
 	public static void main(String[] args) throws IOException, ParseException{
 		d = new Dataset();
 		new ReadCVSData(d);
-		System.out.println("total no of vidIDs populated: "+d.videoIDs.size());
-		seperateTags(15000);
-		//populateTagNetwork();
-		populateTagNetworkM();
-		populateTagNetworkB();
+		System.out.println("total no of vidIDs populated: "+d.videoIDs.size()+"_"+d.videoIDToVideoMap.size());
+		int stage = 2;
+		if(stage == 1)
+		{
+			seperateTags(15000);
+			//populateTagNetwork();
+			populateTagNetworkM();
+			populateTagNetworkB();
+			//thresholdTagNetwork(2500);
+			thresholdTagNetworkM(400);
+			thresholdTagNetworkB(5000);
+			//populateGraphFileForConnectedComponents();
+			populateGraphFileForConnectedComponentsM();
+			populateGraphFileForConnectedComponentsB();
+			//findConnectedComponents();
+			findConnectedComponentsM();
+			findConnectedComponentsB();
+			System.out.println("final clusterID: "+d.clusterID+" --- "+d.tagToClusterMap.size());
+			populateClusterFiles();
+		}
+		else if(stage == 2)
+		{
+			// now we have all the videos in the Dataset d, we need to do that factor disentangling
+			readClusterFiles();
+		}
+	}
+	
+	public static void readClusterFiles() throws IOException, ParseException
+	{
+		int clusterNo = 1;
 		
-		//thresholdTagNetwork(2500);
-		thresholdTagNetworkM(400);
-		thresholdTagNetworkB(5000);
+		BufferedReader br1 = new BufferedReader(new FileReader("bounds_split90.txt"));
 		
-		//populateGraphFileForConnectedComponents();
-		populateGraphFileForConnectedComponentsM();
-		populateGraphFileForConnectedComponentsB();
-		
-		//findConnectedComponents();
-		findConnectedComponentsM();
-		findConnectedComponentsB();
-		System.out.println("final clusterID: "+d.clusterID+" --- "+d.tagToClusterMap.size());
-		populateClusterFiles();
+		BufferedReader br2 = new BufferedReader(new FileReader("split90_result.txt"));
+		String lineparam = br2.readLine();
+		String linedate = br1.readLine();
+		//String lineparam = "";
+		//String linedate = "";
+		while(clusterNo<=37 && lineparam!=null)
+		{
+			
+			System.out.println("CLUSTER "+clusterNo+"-----------------------------");
+			//System.out.println(linedate);
+			String parts[] = linedate.split("\t");
+			SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+			Date start = df.parse(parts[0].substring(1, parts[0].length()-1));
+			Date end = df.parse(parts[1].substring(1, parts[1].length()-1));
+			
+			String parts1[] = lineparam.split("\t");
+			double mu = Double.parseDouble(parts1[0]);
+			double w = Double.parseDouble(parts1[1]);
+			double beta = Double.parseDouble(parts1[2]);
+			lineparam = br2.readLine();
+			linedate = br1.readLine();
+			//System.out.println(mu+"__"+w+"__"+beta);
+			BufferedReader br = new BufferedReader(new FileReader("cluster/cluster"+clusterNo+".txt"));
+			String line = br.readLine();
+			
+			int cc=0;
+			//if(cc==0) continue;
+			HashMap<Integer, ArrayList<Video>> dayToVideoList = new HashMap<Integer, ArrayList<Video>>();
+			ArrayList<Integer> dayList = new ArrayList<Integer>();
+			HashMap<String, ArrayList<Video>> userVidListMap = new HashMap<String, ArrayList<Video>>();
+			while(line!=null)
+			{
+				cc++;
+				int videoID = Integer.parseInt(line);
+				Video v = d.videoIDToVideoMap.get(videoID);
+				int MILLIS_IN_DAY = 1000 * 60 * 60 * 24;
+				//start = start.getTime()-MILLIS_IN_DAY;
+				//TimeUnit.
+				if(v.uploadDate.compareTo(start)>=0 && v.uploadDate.compareTo(end)<=0);
+				//if(v.uploadDate.after(start) && v.uploadDate.before(end));
+				else {line = br.readLine();continue;}
+				// now populate this video to this cluster's daytoVid hashmap
+				// get Day No
+				//int dayNo = getDayNo(v);
+				//Date initialDate = new Date(2013-1900, 8, 31);
+				//System.out.println("Initial Date: "+initialDate.toGMTString());
+				
+				//user Map START
+				if(userVidListMap.containsKey(v.user))
+				{
+					ArrayList<Video> vList = userVidListMap.get(v.user);
+					vList.add(v);
+					userVidListMap.put(v.user, vList);
+				}
+				else
+				{
+					ArrayList<Video> vList = new ArrayList<Video>();
+					vList.add(v);
+					userVidListMap.put(v.user, vList);
+				}
+				//user Map END
+				
+				int dayNo = (int) getDateDiff(start, v.uploadDate, TimeUnit.DAYS);
+				if(dayToVideoList.containsKey(dayNo))
+				{
+					ArrayList<Video> vList = dayToVideoList.get(dayNo);
+					vList.add(v);
+					dayToVideoList.put(dayNo,  vList);
+				}
+				else
+				{
+					ArrayList<Video> vList = new ArrayList<Video>();
+					vList.add(v);
+					dayToVideoList.put(dayNo, vList);
+					dayList.add(dayNo);
+				}
+				line = br.readLine();
+			}
+			//System.out.println("For this cluster, hashmap size: "+dayToVideoList.size()+" dayList size: "+dayList.size());
+			//System.out.println(cc);
+			// now we have populated the DayToVideoList HashMap needed for rest of the calculation for this cluster
+			// now we go to the main calculations
+			//int ti, tj;
+			Collections.sort(dayList);
+			//for(int i =0;i<dayList.size();i++) System.out.println(dayToVideoList.get(dayList.get(i)).size());
+			double selfD=0, selfN=0, socialN = 0, num=0, den=0;
+			//System.out.println("UserVideoMap: "+userVidListMap.size());
+			// work om finding user's avg
+			HashMap<String, Double> userAvg = new HashMap<String, Double>();
+			Iterator<String> itr = userVidListMap.keySet().iterator();
+			while(itr.hasNext())
+			{
+				String user = itr.next();
+				ArrayList<Video> vList = userVidListMap.get(user);
+				int size = vList.size();
+				Iterator<Video> itrv = vList.iterator();
+				int numViewsComments = 0;
+				while(itrv.hasNext())
+				{
+					Video v = itrv.next();
+					numViewsComments+= v.nViews;
+					numViewsComments+= v.nComments;
+				}
+				double avgVC = (double)numViewsComments/(double)size;
+				//System.out.println("Populating avg VC for user: "+avgVC+" size: "+size+" sumVC: "+numViewsComments);
+				userAvg.put(user, avgVC);
+			}
+			//System.exit(0);
+			for(int j=0;j<dayList.size();j++)
+			{
+				int tj = dayList.get(j);
+				den = 0;
+				double carry=0;
+				ArrayList<Video> vjList = dayToVideoList.get(tj);
+				int ttj = 0;
+				while(ttj<vjList.size())
+				{
+					Video vj = vjList.get(ttj);
+					for(int i=0;i<j;i++)
+					{
+						int ti = dayList.get(i);
+						ArrayList<Video> viList = dayToVideoList.get(ti);
+						int nV = viList.size();
+						int tti=0;
+						while(tti<nV)
+						{
+							Video vi = viList.get(tti);
+							double g = (beta*Math.exp(-1*w*(tj-ti)));
+							carry += g;
+							num = g;
+							den = mu+carry;
+							selfD += (num/den);
+							if(vj.user.compareTo(vi.user)==0) selfN+= (num/den);
+							// SOCIAL START
+							double avgOfvjUser = userAvg.get(vj.user);
+							if((vi.nComments+vi.nViews) > avgOfvjUser) socialN+= (num/den);
+							// SOCIAL END
+							tti++;
+						}
+						//System.out.println(num+" / "+den+"__"+carry+"____"+selfD);
+					}
+					ttj++;
+				}
+				
+				//System.out.println("--------------------------------------"+selfD);
+				//if(j==3) System.exit(0);
+			}
+			System.out.println("Self-Reinforcing Effect "+selfN/selfD+"\t Popularity Effect"+ socialN/selfD);
+			clusterNo++;
+			//break;
+		}
+	}
+	
+	public static long getDateDiff(Date date1, Date date2, TimeUnit timeUnit) {
+	    long diffInMillies = date2.getTime() - date1.getTime();
+	    return timeUnit.convert(diffInMillies,TimeUnit.MILLISECONDS);
+	}
+	
+	public static int getDayNo(Video v)
+	{
+		int dayNo = 0;
+		return dayNo;
 	}
 	
 	public static void populateClusterFiles() throws IOException

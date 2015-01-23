@@ -9,12 +9,15 @@ public class Dataset {
 	public HashMap<Integer, String> invTagsMapM;
 	public HashMap<Integer, String> invTagsMapB;
 	public HashMap<String, Integer> tagsCountsMap;
-	
 	public HashMap<String, Integer> tagsMapB;
 	public HashMap<String, Integer> tagsMapM;
 	public HashMap<String, String> videoIDs;
-	
+	public HashMap<String, Cluster> clusterMap;
 	public HashMap<String, Integer> tagToClusterMap;
+	//public HashMap<Integer, ArrayList<Video>> dayToVideoListMap;
+	public HashMap<Integer, Video> videoIDToVideoMap;
+	
+	
 	public int tagNetwork[][];
 	public int tagNetworkM[][];
 	public int tagNetworkB[][];
@@ -36,6 +39,10 @@ public class Dataset {
 		this.tagsCountsMap = new HashMap<String, Integer>();
 		this.videoIDs = new HashMap<String, String>();
 		this.tagToClusterMap = new HashMap<String, Integer>();
+		this.clusterMap = new HashMap<String, Cluster>();
+		//this.dayToVideoListMap = new HashMap<Integer, ArrayList<Video>>();
+		this.videoIDToVideoMap = new HashMap<Integer, Video>();
+		
 	}
 	
 	public void addVideo(Video v)

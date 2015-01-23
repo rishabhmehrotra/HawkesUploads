@@ -25,7 +25,11 @@ public class ReadCVSData {
 		{
 			Video v = new Video(line,d);
 			if(v.flag == 1) {skips++;}
-			else d.addVideo(v);
+			else
+			{
+				d.addVideo(v);
+				d.videoIDToVideoMap.put(v.videoID, v);
+			}
 			line = br.readLine();
 		}
 		System.out.println(skips+"--"+d.videos.size());
