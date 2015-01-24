@@ -35,11 +35,11 @@ public class PredictUnseenEvents {
 		String line3 = br3.readLine();
 		*/
 		///*
-		BufferedReader br1 = new BufferedReader(new FileReader("split90_result.txt"));
+		BufferedReader br1 = new BufferedReader(new FileReader("split15_result.txt"));
 		String line1 = br1.readLine();
-		BufferedReader br2 = new BufferedReader(new FileReader("split90_result_linearcond.txt"));
+		BufferedReader br2 = new BufferedReader(new FileReader("split15_result_linearcond.txt"));
 		String line2 = br2.readLine();
-		BufferedReader br3 = new BufferedReader(new FileReader("split90_result_hpoiscond.txt"));
+		BufferedReader br3 = new BufferedReader(new FileReader("split15_result_hpoiscond.txt"));
 		String line3 = br3.readLine();
 		//*/
 		/*

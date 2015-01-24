@@ -58,7 +58,7 @@ public class Driver {
 		while(clusterNo<=37 && lineparam!=null)
 		{
 			
-			System.out.println("CLUSTER "+clusterNo+"-----------------------------");
+			//System.out.println("CLUSTER "+clusterNo+"-----------------------------");
 			//System.out.println(linedate);
 			String parts[] = linedate.split("\t");
 			SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
@@ -197,7 +197,9 @@ public class Driver {
 				//System.out.println("--------------------------------------"+selfD);
 				//if(j==3) System.exit(0);
 			}
-			System.out.println("Self-Reinforcing Effect "+selfN/selfD+"\t Popularity Effect"+ socialN/selfD);
+			double selfEffect = selfN/selfD, PopularityEffect = socialN/selfD;
+			double exoEffect = 1-(selfEffect+PopularityEffect);
+			System.out.println(selfEffect+"\t"+ PopularityEffect+"\t"+exoEffect);
 			clusterNo++;
 			//break;
 		}
